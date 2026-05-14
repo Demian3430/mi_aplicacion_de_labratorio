@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>NEURAL SYSTEM PRO v2.5 - Feedback Edition</title>
+    <style>
+        :root { --neon: #00ffcc; --bg: #050505; --error: #ff4b4b; --star: #ffda44; --info: #00b3ff; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        nav { width: 260px; border-right: 2px solid var(--neon); padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #000; }
+        .btn-menu { background: rgba(0,255,204,0.1); border: 1px solid var(--neon); color: var(--neon); padding: 12px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-menu:hover { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
+
+        /* Contenedor Principal */
+        main { flex-grow: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
+        .screen { display: none; width: 100%; max-width: 900px; text-align: center; }
+        .active { display: block; }
+
+        .card { background: rgba(0,255,204,0.05); border: 2px solid var(--neon); border-radius: 15px; padding: 40px; font-size: 2.5rem; box-shadow: 0 0 20px rgba(0,255,204,0.2); margin: 20px 0; }
+        .grid-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 30px; }
+        
+        .btn-game { background: transparent; border: 2px solid var(--neon); color: var(--neon); padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.3s; }
+        .btn-game:hover { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); transform: scale(1.05); }
+
+        /* Retroalimentación Estilizada */
+        .feedback-box { background: rgba(0, 179, 255, 0.1); border: 1px solid var(--info); border-radius: 10px; padding: 20px; margin-top: 20px; text-align: left; }
+        .feedback-title { color: var(--info); font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; }
+        
+        #custom-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; border: 3px solid var(--neon); padding: 40px; z-index: 1000; text-align: center; box-shadow: 0 0 50px var(--neon); min-width: 350px; max-width: 80%; border-radius: 20px; max-height: 80vh; overflow-y: auto; }
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
+
+        .star { font-size: 1.5rem; filter: grayscale(1); }
+        .star.earned { filter: grayscale(0); text-shadow: 0 0 10px var(--star); color: var(--star); }
+    </style>
+</head>
+<body>
+
+    <div id="modal-overlay"></div>
+    <div id="custom-modal">
+        <h2 id="modal-title">SISTEMA</h2>
+        <div id="modal-msg"></div>
+        <hr style="border: 0; border-top: 1px solid var(--neon); margin: 20px 0;">
+        <button class="btn-game" onclick="closeModal()">CONTINUAR AL REPORTE</button>
+    </div>
+
+    <nav>
+        <h2 style="text-shadow: 0 0 10px var(--neon);">CONTROL</h2>
+        <button class="btn-menu" onclick="location.reload()">🏠 INICIO</button>
+        <button class="btn-menu" onclick="showScreen('select')">🧪 MÓDULOS</button>
+        <hr style="width:100%; border:var(--neon) 1px solid">
+        <div>
+            PROGRESO:<br>
+            Conc: <span id="s1" class="star">⭐</span><br>
+            Pres: <span id="s2" class="star">⭐</span><br>
+            Temp: <span id="s3" class="star">⭐</span>
+        </div>
+    </nav>
+
+    <main>
+        <div id="start" class="screen active">
+            <h1 style="font-size: 4rem; text-shadow: 0 0 20px var(--neon);">NEURAL LAB</h1>
+            <p>Simulador de Dinámica Química Offline</p>
+            <button class="btn-game" style="padding: 20px 60px" onclick="showScreen('select')">INICIAR INTERFAZ</button>
+        </div>
+
+        <div id="select" class="screen">
+            <h1>SELECCIONAR PROTOCOLO</h1>
+            <div class="grid-buttons">
+                <button class="btn-game" onclick="startGame('Concentración')">CONCENTRACIÓN</button>
+                <button class="btn-game" onclick="startGame('Presión')">PRESIÓN / VOL</button>
+                <button class="btn-game" onclick="startGame('Temperatura')">TERMODINÁMICA</button>
+            </div>
+        </div>
+
+        <div id="game" class="screen">
+            <div style="font-size: 1.4rem; margin-bottom: 20px;">
+                ❤️ <span id="lifes">3</span> | ⏳ <span id="timer">40</span>s | <span id="progress">1/5</span>
+            </div>
+            <div id="equation" class="card">---</div>
+            <p id="action" style="font-size: 1.8rem; color: #fff;">Analizando...</p>
+            <div id="options" class="grid-buttons"></div>
+        </div>
+
+        <div id="results" class="screen">
+            <h1>REPORTE DE SESIÓN</h1>
+            <div id="performance-summary" style="margin-bottom: 20px; font-size: 1.2rem; text-align: left;"></div>
+            <div id="history" style="text-align: left; padding: 20px; border: 1px solid var(--neon); height: 200px; overflow-y: auto; background: rgba(0,0,0,0.5);"></div>
+            <br>
+            <button class="btn-game" onclick="showScreen('select')">OTRO MÓDULO</button>
+        </div>
+    </main>
+
+    <script>
+        // CONCEPTOS PARA EL REPORTE (Añadido)
+        const CONCEPTOS_REPORTE = {
+            "Concentración": {
+                titulo: "Dinámica de Masa (Concentración)",
+                teoria: "El sistema busca compensar la adición o retiro de sustancias. Si añades un reactivo, el sistema 'corre' hacia los productos para consumirlo. Si retiras un producto, el sistema se desplaza a la derecha para fabricar más y recuperar el equilibrio.",
+                clave: "Aumento [Reactivo] → Desplazamiento a Productos (Derecha)."
+            },
+            "Presión": {
+                titulo: "Efecto de Presión y Volumen",
+                teoria: "La presión solo afecta a sustancias en estado gaseoso. Al aumentar la presión (o reducir el volumen), el sistema se desplaza hacia el lado de la ecuación que tenga MENOR número de moles gaseosos para aliviar el estrés.",
+                clave: "↑ Presión → Lado con menos moles de gas."
+            },
+            "Temperatura": {
+                titulo: "Termodinámica del Equilibrio",
+                teoria: "Depende de si la reacción libera calor (Exotérmica) o lo absorbe (Endotérmica). En una reacción exotérmica, el calor actúa como un producto; si calientas, el sistema retrocede hacia los reactivos para enfriarse.",
+                clave: "Exotérmica + Calor → Desplazamiento a Reactivos (Izquierda)."
+            }
+        };
+
+        const THEORIES = {
+            "Concentración": "Principio: Al aumentar un reactivo, el sistema consume el exceso desplazándose a productos. Si retiras algo, el sistema se desplaza hacia ese lado para reponerlo.",
+            "Presión": "Principio: Al aumentar la presión (o bajar volumen), el sistema se mueve hacia donde hay MENOS moles de gas. Si los moles son iguales, no hay cambio.",
+            "Temperatura": "Principio: En reacciones exotérmicas (+Q), el calor es un producto; enfriar desplaza a la derecha. En endotérmicas, el calor es reactivo; calentar desplaza a la derecha."
+        };
+
+        const DATA = {
+            "Concentración": [
+                {e: "N₂ + 3H₂ ⇌ 2NH₃", p: "Inyectas nitrógeno (N₂)", o: ["Hacia Productos", "Hacia Reactivos", "Sin desplazamiento"], r: "Hacia Productos"},
+                {e: "Fe³⁺ + SCN⁻ ⇌ [FeSCN]²⁺", p: "Retiras el producto final", o: ["Hacia Productos", "Hacia Reactivos", "Equilibrio"], r: "Hacia Productos"},
+                {e: "A ⇌ B", p: "Agregas más reactivo A", o: ["Formar Productos", "Formar Reactivos", "No afecta"], r: "Formar Productos"}
+            ],
+            "Presión": [
+                {e: "N₂O₄(g) ⇌ 2NO₂(g)", p: "Aumentas Presión ↑", o: ["Hacia Reactivos", "Hacia Productos", "Invariante"], r: "Hacia Reactivos"},
+                {e: "H₂ + I₂ ⇌ 2HI", p: "Bajas Volumen ↓", o: ["Sin Cambio", "Derecha", "Izquierda"], r: "Sin Cambio"}
+            ],
+            "Temperatura": [
+                {e: "A + B ⇌ C + Calor", p: "Calientas el reactor ↑", o: ["Desplaza a Reactivos", "Desplaza a Productos", "Se detiene"], r: "Desplaza a Reactivos"},
+                {e: "Calor + X ⇌ Y", p: "Calientas el reactor ↑", o: ["Hacia Reactivos", "Hacia Productos", "No influye"], r: "Hacia Productos"}
+            ]
+        };
+
+        let state = { index: 0, lifes: 3, timeLeft: 40, timerId: null, stars: {}, history: [], correct: 0, errors: 0 };
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function startGame(mode) {
+            state = { ...state, currentMode: mode, index: 0, lifes: 3, timeLeft: 40, history: [], correct: 0, errors: 0 };
+            showScreen('game');
+            renderQuestion();
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(state.timerId);
+            state.timerId = setInterval(() => {
+                state.timeLeft--;
+                document.getElementById('timer').innerText = state.timeLeft;
+                if(state.timeLeft <= 0) endGame(false);
+            }, 1000);
+        }
+
+        function renderQuestion() {
+            const questions = DATA[state.currentMode];
+            if(!questions[state.index]) return endGame(true);
+            const q = questions[state.index];
+            document.getElementById('lifes').innerText = state.lifes;
+            document.getElementById('progress').innerText = `${state.index + 1}/${questions.length}`;
+            document.getElementById('equation').innerText = q.e;
+            document.getElementById('action').innerText = `ALTERACIÓN: ${q.p}`;
+            const opts = document.getElementById('options');
+            opts.innerHTML = "";
+            q.o.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'btn-game';
+                b.innerText = opt;
+                b.onclick = () => check(opt);
+                opts.appendChild(b);
+            });
+        }
+
+        function check(ans) {
+            const q = DATA[state.currentMode][state.index];
+            if(ans === q.r) {
+                state.correct++;
+                state.index++;
+                state.history.push(`<p style="color:var(--neon)">✔ ${q.e} - Correcto</p>`);
+            } else {
+                state.errors++;
+                state.lifes--;
+                state.history.push(`<p style="color:var(--error)">✘ ${q.e} - Error (Era: ${q.r})</p>`);
+            }
+            if(state.lifes <= 0) endGame(false);
+            else renderQuestion();
+        }
+
+        function generateFeedback(win) {
+            let feedbackHTML = `<div class="feedback-box">`;
+            feedbackHTML += `<span class="feedback-title">Análisis de Le Châtelier:</span>`;
+            feedbackHTML += `<p>${THEORIES[state.currentMode]}</p>`;
+            
+            if (state.errors > 0) {
+                feedbackHTML += `<p style="color:var(--error)">💡 Tip: Has tenido problemas detectando el sentido del equilibrio. Recuerda que el sistema siempre intenta OPONERSE al cambio que tú haces.</p>`;
+            } else if (win) {
+                feedbackHTML += `<p style="color:var(--star)">🚀 ¡Excelente! Tienes un dominio total de cómo la ${state.currentMode} afecta la cinética del sistema.</p>`;
+            }
+            feedbackHTML += `</div>`;
+            return feedbackHTML;
+        }
+
+        // FUNCIÓN ENDGAME MODIFICADA (Para incluir los conceptos en el reporte)
+        function endGame(win) {
+            clearInterval(state.timerId);
+            const feedback = generateFeedback(win);
+            
+            // Obtenemos la teoría específica del módulo jugado
+            const infoTeorica = CONCEPTOS_REPORTE[state.currentMode];
+            
+            if(win) {
+                state.stars[state.currentMode] = true;
+                updateUIStars();
+                document.getElementById('modal-title').innerText = "¡MÓDULO COMPLETADO!";
+                document.getElementById('modal-msg').innerHTML = `Aciertos: ${state.correct} | Errores: ${state.errors}<br>${feedback}`;
+            } else {
+                document.getElementById('modal-title').innerText = "SISTEMA INESTABLE";
+                document.getElementById('modal-msg').innerHTML = `El equilibrio se ha roto. Revisa la teoría:<br>${feedback}`;
+            }
+
+            // Actualizamos el reporte de sesión con la caja de retroalimentación teórica
+            document.getElementById('performance-summary').innerHTML = `
+                <div style="border: 1px solid var(--info); padding: 15px; background: rgba(0, 179, 255, 0.05); margin-bottom: 20px; border-radius: 8px;">
+                    <h3 style="color: var(--info); margin-top: 0;">📚 REPASO TEÓRICO: ${infoTeorica.titulo}</h3>
+                    <p style="font-size: 0.9rem; color: #ccc;">${infoTeorica.teoria}</p>
+                    <b style="color: var(--neon);">REGLA DE ORO: ${infoTeorica.clave}</b>
+                </div>
+                <p>Estatus de la misión: ${win ? '<span style="color:var(--neon); font-weight:bold;">ÉXITO</span>' : '<span style="color:var(--error); font-weight:bold;">FALLIDO</span>'}</p>
+                <p>Aciertos: ${state.correct} | Errores: ${state.errors}</p>
+            `;
+
+            document.getElementById('history').innerHTML = state.history.join("");
+            
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('custom-modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('custom-modal').style.display = 'none';
+            showScreen('results');
+        }
+
+        function updateUIStars() {
+            const map = {"Concentración": "s1", "Presión": "s2", "Temperatura": "s3"};
+            if(state.stars[state.currentMode]) document.getElementById(map[state.currentMode]).classList.add('earned');
+        }
+    </script>
+</body>
+</html>
